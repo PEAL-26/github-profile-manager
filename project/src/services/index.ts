@@ -1,12 +1,14 @@
-import { invoke } from "@tauri-apps/api/core"
 import type {
-  Profile,
+  ActivityLog,
+  BackupInfo,
   CreateProfilePayload,
+  ImportReport,
+  Profile,
+  Settings,
   SshKey,
   SshTestResult,
-  Settings,
-  ActivityLog,
 } from "@/types"
+import { invoke } from "@tauri-apps/api/core"
 
 export const profileService = {
   getAll: () => invoke<Profile[]>("get_all_profiles"),
@@ -40,6 +42,15 @@ export const gitService = {
     invoke<void>("set_global_git_identity", { name, email, sshKeyPath }),
 }
 
+export const backupService = {
+  getInfo: (path: string) => invoke<BackupInfo>("get_backup_info", { path }),
+  export: (path: string, includeSecrets: boolean, password?: string) =>
+    invoke<number>("export_backup", { path, includeSecrets, password }),
+  import: (path: string, password?: string) =>
+    invoke<ImportReport>("import_backup", { path, password }),
+}
+
 export const logService = {
   getAll: () => invoke<ActivityLog[]>("get_activity_logs"),
+  logError: (message: string) => invoke<void>("log_frontend_error", { message }),
 }

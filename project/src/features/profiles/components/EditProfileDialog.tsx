@@ -1,7 +1,4 @@
-import { useEffect, useState } from "react"
-import { useProfileStore } from "@/stores/useProfileStore"
-import { sshService } from "@/services"
-import type { Profile, SshKey } from "@/types"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -10,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -20,9 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useForm } from "react-hook-form"
+import { appToast } from "@/lib/toast"
+import {
+  type CreateProfileFormData,
+  createProfileSchema,
+  isHostAliasTaken,
+} from "@/lib/validations"
+import { sshService } from "@/services"
+import { useProfileStore } from "@/stores/useProfileStore"
+import type { Profile, SshKey } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createProfileSchema, type CreateProfileFormData } from "@/lib/validations"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
 
 interface EditProfileDialogProps {
   open: boolean
@@ -31,7 +36,7 @@ interface EditProfileDialogProps {
 }
 
 export function EditProfileDialog({ open, onOpenChange, profile }: EditProfileDialogProps) {
-  const { updateProfile, isLoading } = useProfileStore()
+  const { updateProfile, isLoading, profiles } = useProfileStore()
   const [sshKeys, setSshKeys] = useState<SshKey[]>([])
   const {
     register,
@@ -57,7 +62,10 @@ export function EditProfileDialog({ open, onOpenChange, profile }: EditProfileDi
 
   useEffect(() => {
     if (open) {
-      sshService.listKeys().then(setSshKeys).catch(() => setSshKeys([]))
+      sshService
+        .listKeys()
+        .then(setSshKeys)
+        .catch(() => setSshKeys([]))
       reset({
         name: profile.name,
         email: profile.email,
@@ -70,8 +78,20 @@ export function EditProfileDialog({ open, onOpenChange, profile }: EditProfileDi
   }, [open, profile, reset])
 
   const onSubmit = async (data: CreateProfileFormData) => {
-    await updateProfile(profile.id, data)
-    onOpenChange(false)
+    // Unicidade: exclui o próprio perfil da comparação.
+    if (isHostAliasTaken(data.hostAlias, profiles, profile.id)) {
+      appToast.error(
+        "Host alias já em uso",
+        `Já existe um perfil com o host alias "${data.hostAlias}". Escolha outro alias.`,
+      )
+      return
+    }
+    try {
+      await updateProfile(profile.id, data)
+      onOpenChange(false)
+    } catch {
+      // O erro já foi exibido como toast pelo store; mantém o diálogo aberto.
+    }
   }
 
   return (
@@ -85,16 +105,12 @@ export function EditProfileDialog({ open, onOpenChange, profile }: EditProfileDi
           <div className="space-y-2">
             <Label htmlFor="edit-name">Nome</Label>
             <Input id="edit-name" {...register("name")} />
-            {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-email">Email</Label>
             <Input id="edit-email" type="email" {...register("email")} />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="edit-githubUsername">Username GitHub</Label>

@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef } from "react"
-import { getCurrentWindow } from "@tauri-apps/api/window"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { useProfileStore } from "@/stores/useProfileStore"
 import { LogicalSize } from "@tauri-apps/api/dpi"
 import { listen } from "@tauri-apps/api/event"
-import { useProfileStore } from "@/stores/useProfileStore"
-import { Button } from "@/components/ui/button"
+import { getCurrentWindow } from "@tauri-apps/api/window"
 import { ChevronDown, X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useEffect, useRef, useState } from "react"
 
 export function TrayPopup() {
   const { profiles, activeProfile, fetchProfiles, setActiveProfile } = useProfileStore()
@@ -37,7 +37,11 @@ export function TrayPopup() {
   }, [dropdownOpen, profiles.length, appWindow])
 
   const handleSelectProfile = async (id: string) => {
-    await setActiveProfile(id)
+    try {
+      await setActiveProfile(id)
+    } catch {
+      // Erro já exibido como toast pelo store.
+    }
     setDropdownOpen(false)
     await fetchProfiles()
   }
@@ -53,14 +57,8 @@ export function TrayPopup() {
   }
 
   return (
-    <div
-      data-tauri-drag-region
-      className="h-full bg-background text-foreground flex flex-col"
-    >
-      <div
-        data-tauri-drag-region
-        className="flex items-center justify-between px-2 py-1.5"
-      >
+    <div data-tauri-drag-region className="h-full bg-background text-foreground flex flex-col">
+      <div data-tauri-drag-region className="flex items-center justify-between px-2 py-1.5">
         <div className="flex items-center gap-1 min-w-0 flex-1" data-tauri-drag-region>
           <Button
             variant="ghost"
@@ -72,19 +70,11 @@ export function TrayPopup() {
               {activeProfile?.name || "Nenhum perfil"}
             </span>
             <ChevronDown
-              className={cn(
-                "h-3 w-3 shrink-0 transition-transform",
-                dropdownOpen && "rotate-180"
-              )}
+              className={cn("h-3 w-3 shrink-0 transition-transform", dropdownOpen && "rotate-180")}
             />
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-5 w-5 shrink-0"
-          onClick={handleClose}
-        >
+        <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={handleClose}>
           <X className="h-3 w-3" />
         </Button>
       </div>
@@ -102,7 +92,7 @@ export function TrayPopup() {
               variant="ghost"
               className={cn(
                 "justify-start h-8 px-3 rounded-none text-xs",
-                profile.isActive && "bg-accent text-accent-foreground font-medium"
+                profile.isActive && "bg-accent text-accent-foreground font-medium",
               )}
               onClick={() => handleSelectProfile(profile.id)}
             >

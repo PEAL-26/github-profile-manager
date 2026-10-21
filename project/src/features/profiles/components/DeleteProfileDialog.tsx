@@ -1,5 +1,4 @@
-import { useProfileStore } from "@/stores/useProfileStore"
-import type { Profile } from "@/types"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -8,7 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { useProfileStore } from "@/stores/useProfileStore"
+import type { Profile } from "@/types"
 
 interface DeleteProfileDialogProps {
   open: boolean
@@ -16,16 +16,16 @@ interface DeleteProfileDialogProps {
   profile: Profile
 }
 
-export function DeleteProfileDialog({
-  open,
-  onOpenChange,
-  profile,
-}: DeleteProfileDialogProps) {
+export function DeleteProfileDialog({ open, onOpenChange, profile }: DeleteProfileDialogProps) {
   const { deleteProfile, isLoading } = useProfileStore()
 
   const handleDelete = async () => {
-    await deleteProfile(profile.id)
-    onOpenChange(false)
+    try {
+      await deleteProfile(profile.id)
+      onOpenChange(false)
+    } catch {
+      // O erro já foi exibido como toast pelo store; mantém o diálogo aberto.
+    }
   }
 
   return (
@@ -34,8 +34,8 @@ export function DeleteProfileDialog({
         <DialogHeader>
           <DialogTitle>Excluir Perfil</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir o perfil <strong>{profile.name}</strong>? Esta ação
-            não pode ser desfeita.
+            Tem certeza que deseja excluir o perfil <strong>{profile.name}</strong>? Esta ação não
+            pode ser desfeita.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

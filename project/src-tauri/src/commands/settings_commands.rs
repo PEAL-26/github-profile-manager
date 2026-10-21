@@ -1,6 +1,7 @@
 use crate::db::activity_logger::{ActivityLog, ActivityLogger};
 use crate::db::settings_repository::{AppSettings, SettingsRepository};
 use crate::error::AppError;
+use crate::utils::error_log;
 use crate::AppState;
 use tauri::State;
 
@@ -8,7 +9,7 @@ use tauri::State;
 pub async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = SettingsRepository::new(&conn);
-    repo.get()
+    error_log::guard("get_settings", repo.get())
 }
 
 #[tauri::command]
@@ -18,12 +19,12 @@ pub async fn update_settings(
 ) -> Result<(), AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = SettingsRepository::new(&conn);
-    repo.save(&settings)
+    error_log::guard("update_settings", repo.save(&settings))
 }
 
 #[tauri::command]
 pub async fn get_activity_logs(state: State<'_, AppState>) -> Result<Vec<ActivityLog>, AppError> {
     let conn = state.database.conn.lock().unwrap();
     let logger = ActivityLogger::new(&conn);
-    logger.get_all()
+    error_log::guard("get_activity_logs", logger.get_all())
 }

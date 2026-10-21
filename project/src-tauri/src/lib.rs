@@ -31,8 +31,21 @@ pub fn run() {
 
     tracing::info!("Application starting");
 
+    tracing::info!(
+        "Log de erros em {}",
+        utils::error_log::log_file_path().display()
+    );
+
+    // Registra panics no ficheiro de log de erros mantendo o comportamento padrão.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        utils::error_log::log_panic(info);
+        default_hook(info);
+    }));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
@@ -189,6 +202,10 @@ pub fn run() {
             commands::credential_commands::save_pat,
             commands::credential_commands::get_pat,
             commands::credential_commands::delete_pat,
+            commands::log_commands::log_frontend_error,
+            commands::backup_commands::get_backup_info,
+            commands::backup_commands::export_backup,
+            commands::backup_commands::import_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

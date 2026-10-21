@@ -9,17 +9,11 @@ pub fn get_gitconfig_path() -> Result<PathBuf, AppError> {
 }
 
 pub fn get_global_git_identity() -> Result<(String, String), AppError> {
-    let output = std::process::Command::new("git")
-        .args(["config", "--global", "user.name"])
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar git: {}", e)))?;
+    let output = crate::utils::process::run_hidden("git", &["config", "--global", "user.name"])?;
 
     let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
-    let output = std::process::Command::new("git")
-        .args(["config", "--global", "user.email"])
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar git: {}", e)))?;
+    let output = crate::utils::process::run_hidden("git", &["config", "--global", "user.email"])?;
 
     let email = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -31,22 +25,16 @@ pub fn set_global_git_identity(
     email: &str,
     ssh_key_path: Option<&str>,
 ) -> Result<(), AppError> {
-    std::process::Command::new("git")
-        .args(["config", "--global", "user.name", name])
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar git: {}", e)))?;
+    crate::utils::process::run_hidden("git", &["config", "--global", "user.name", name])?;
 
-    std::process::Command::new("git")
-        .args(["config", "--global", "user.email", email])
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar git: {}", e)))?;
+    crate::utils::process::run_hidden("git", &["config", "--global", "user.email", email])?;
 
     if let Some(key_path) = ssh_key_path {
         let ssh_command = format!("ssh -i \"{}\"", key_path);
-        std::process::Command::new("git")
-            .args(["config", "--global", "core.sshCommand", &ssh_command])
-            .output()
-            .map_err(|e| AppError::SystemError(format!("Falha ao executar git: {}", e)))?;
+        crate::utils::process::run_hidden(
+            "git",
+            &["config", "--global", "core.sshCommand", &ssh_command],
+        )?;
     }
 
     Ok(())

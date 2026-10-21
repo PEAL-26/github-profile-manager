@@ -15,6 +15,23 @@ export const createProfileSchema = z.object({
 
 export type CreateProfileFormData = z.infer<typeof createProfileSchema>
 
+/**
+ * Verifica se um host alias já está em uso por outro perfil.
+ * A comparação ignora maiúsculas/minúsculas (aliases SSH são
+ * case-insensitive) e permite ignorar o próprio perfil na edição.
+ */
+export function isHostAliasTaken(
+  hostAlias: string,
+  profiles: Array<{ id?: string; hostAlias: string }>,
+  excludeProfileId?: string,
+): boolean {
+  const normalized = hostAlias.trim().toLowerCase()
+  if (!normalized) return false
+  return profiles.some(
+    (p) => p.id !== excludeProfileId && p.hostAlias.trim().toLowerCase() === normalized,
+  )
+}
+
 export const createProfilePayloadSchema = createProfileSchema.extend({
   sshKeyId: z.string().optional(),
   defaultDirectory: z.string().optional(),

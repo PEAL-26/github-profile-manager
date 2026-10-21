@@ -2,6 +2,7 @@ use crate::error::AppError;
 use rusqlite::params;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub id: String,
     pub theme: String,

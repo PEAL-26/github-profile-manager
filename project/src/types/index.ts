@@ -69,3 +69,18 @@ export interface AppError {
   code: string
   message: string
 }
+
+export interface BackupInfo {
+  encrypted: boolean
+  version: string
+  exportedAt?: string
+  profileCount?: number
+}
+
+export interface ImportReport {
+  profilesCreated: number
+  profilesUpdated: number
+  keysRestored: number
+  settingsApplied: boolean
+  patsRestored: number
+}

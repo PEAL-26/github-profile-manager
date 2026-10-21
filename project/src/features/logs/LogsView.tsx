@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatLogDate } from "@/lib/utils"
 import { logService } from "@/services"
 import type { ActivityLog } from "@/types"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ScrollText } from "lucide-react"
+import { useEffect, useState } from "react"
 
 const levelColors: Record<string, string> = {
   info: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
@@ -50,28 +51,20 @@ export function LogsView() {
           <CardContent>
             <div className="space-y-3">
               {logs.map((log) => (
-                <div
-                  key={log.id}
-                  className="flex items-start gap-3 rounded-lg border p-3 text-sm"
-                >
-                  <Badge
-                    variant="secondary"
-                    className={levelColors[log.level] ?? ""}
-                  >
+                <div key={log.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                  <Badge variant="secondary" className={levelColors[log.level] ?? ""}>
                     {log.level.toUpperCase()}
                   </Badge>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{log.category}</span>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(log.createdAt).toLocaleString("pt-BR")}
+                        {formatLogDate(log.createdAt)}
                       </span>
                     </div>
                     <p className="text-muted-foreground mt-1">{log.message}</p>
                     {log.details && (
-                      <p className="text-xs text-muted-foreground mt-1 font-mono">
-                        {log.details}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 font-mono">{log.details}</p>
                     )}
                   </div>
                 </div>

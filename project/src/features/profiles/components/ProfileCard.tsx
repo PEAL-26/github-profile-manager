@@ -1,12 +1,12 @@
-import { useState } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useProfileStore } from "@/stores/useProfileStore"
 import type { Profile } from "@/types"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Edit, Trash2, Check } from "lucide-react"
-import { EditProfileDialog } from "./EditProfileDialog"
+import { Check, Edit, Trash2 } from "lucide-react"
+import { useState } from "react"
 import { DeleteProfileDialog } from "./DeleteProfileDialog"
+import { EditProfileDialog } from "./EditProfileDialog"
 
 interface ProfileCardProps {
   profile: Profile
@@ -39,13 +39,21 @@ export function ProfileCard({ profile }: ProfileCardProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setActiveProfile(profile.id)}
+                onClick={() => {
+                  // Erros viram toast via store; catch evita rejeição não tratada.
+                  setActiveProfile(profile.id).catch(() => {})
+                }}
                 disabled={isLoading}
               >
                 Ativar
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setEditOpen(true)}
+            >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
