@@ -32,21 +32,28 @@ pub struct AppErrorDto {
     pub message: String,
 }
 
+impl AppError {
+    /// Código estável do erro, compartilhado entre a API IPC e o log de erros.
+    pub fn code(&self) -> &'static str {
+        match self {
+            AppError::ProfileNotFound { .. } => "PROFILE_NOT_FOUND",
+            AppError::SshKeyNotFound { .. } => "SSH_KEY_NOT_FOUND",
+            AppError::InvalidGitHubToken => "INVALID_GITHUB_TOKEN",
+            AppError::DatabaseError(_) => "DATABASE_ERROR",
+            AppError::SystemError(_) => "SYSTEM_ERROR",
+            AppError::ConfigError(_) => "CONFIG_ERROR",
+            AppError::ValidationError(_) => "VALIDATION_ERROR",
+        }
+    }
+}
+
 impl Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let dto = AppErrorDto {
-            code: match self {
-                AppError::ProfileNotFound { .. } => "PROFILE_NOT_FOUND".to_string(),
-                AppError::SshKeyNotFound { .. } => "SSH_KEY_NOT_FOUND".to_string(),
-                AppError::InvalidGitHubToken => "INVALID_GITHUB_TOKEN".to_string(),
-                AppError::DatabaseError(_) => "DATABASE_ERROR".to_string(),
-                AppError::SystemError(_) => "SYSTEM_ERROR".to_string(),
-                AppError::ConfigError(_) => "CONFIG_ERROR".to_string(),
-                AppError::ValidationError(_) => "VALIDATION_ERROR".to_string(),
-            },
+            code: self.code().to_string(),
             message: self.to_string(),
         };
         dto.serialize(serializer)

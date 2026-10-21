@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Save } from "lucide-react"
+import { BackupSection } from "./components/BackupSection"
 
 export function SettingsView() {
   const { settings, isLoading, fetchSettings, updateSettings } = useSettingsStore()
@@ -213,6 +214,8 @@ export function SettingsView() {
           {isLoading ? "Salvando..." : "Salvar Configurações"}
         </Button>
       </div>
+
+      <BackupSection />
     </div>
   )
 }

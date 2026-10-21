@@ -3,6 +3,7 @@ use crate::db::profile_repository::ProfileRepository;
 use crate::db::ssh_key_repository::SshKeyRepository;
 use crate::error::AppError;
 use crate::models::profile::{CreateProfileDto, Profile};
+use crate::utils::error_log;
 use crate::AppState;
 use tauri::State;
 
@@ -10,7 +11,7 @@ use tauri::State;
 pub async fn get_all_profiles(state: State<'_, AppState>) -> Result<Vec<Profile>, AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = ProfileRepository::new(&conn);
-    repo.get_all()
+    error_log::guard("get_all_profiles", repo.get_all())
 }
 
 #[tauri::command]
@@ -20,7 +21,7 @@ pub async fn get_profile_by_id(
 ) -> Result<Profile, AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = ProfileRepository::new(&conn);
-    repo.get_by_id(&id)
+    error_log::guard("get_profile_by_id", repo.get_by_id(&id))
 }
 
 #[tauri::command]
@@ -30,7 +31,7 @@ pub async fn create_profile(
 ) -> Result<Profile, AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = ProfileRepository::new(&conn);
-    let profile = repo.create(&payload)?;
+    let profile = error_log::guard("create_profile", repo.create(&payload))?;
 
     let logger = ActivityLogger::new(&conn);
     let _ = logger.info("profile", &format!("Created profile: {}", profile.name));
@@ -46,7 +47,7 @@ pub async fn update_profile(
 ) -> Result<Profile, AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = ProfileRepository::new(&conn);
-    let profile = repo.update(&id, &payload)?;
+    let profile = error_log::guard("update_profile", repo.update(&id, &payload))?;
 
     let logger = ActivityLogger::new(&conn);
     let _ = logger.info("profile", &format!("Updated profile: {}", profile.name));
@@ -58,8 +59,8 @@ pub async fn update_profile(
 pub async fn delete_profile(state: State<'_, AppState>, id: String) -> Result<(), AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = ProfileRepository::new(&conn);
-    let profile = repo.get_by_id(&id)?;
-    repo.delete(&id)?;
+    let profile = error_log::guard("delete_profile", repo.get_by_id(&id))?;
+    error_log::guard("delete_profile", repo.delete(&id))?;
 
     let logger = ActivityLogger::new(&conn);
     let _ = logger.warn("profile", &format!("Deleted profile: {}", profile.name));
@@ -71,9 +72,9 @@ pub async fn delete_profile(state: State<'_, AppState>, id: String) -> Result<()
 pub async fn set_active_profile(state: State<'_, AppState>, id: String) -> Result<(), AppError> {
     let conn = state.database.conn.lock().unwrap();
     let repo = ProfileRepository::new(&conn);
-    repo.set_active(&id)?;
+    error_log::guard("set_active_profile", repo.set_active(&id))?;
 
-    let profile = repo.get_by_id(&id)?;
+    let profile = error_log::guard("set_active_profile", repo.get_by_id(&id))?;
 
     let ssh_key_path = profile
         .ssh_key_id
@@ -88,11 +89,12 @@ pub async fn set_active_profile(state: State<'_, AppState>, id: String) -> Resul
 
     drop(conn);
 
-    crate::utils::git::set_global_git_identity(
-        &profile.name,
-        &profile.email,
-        ssh_key_path.as_deref(),
-    )?;
-
-    Ok(())
+    error_log::guard(
+        "set_active_profile",
+        crate::utils::git::set_global_git_identity(
+            &profile.name,
+            &profile.email,
+            ssh_key_path.as_deref(),
+        ),
+    )
 }

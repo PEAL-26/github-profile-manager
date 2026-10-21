@@ -2,6 +2,7 @@ use rusqlite::params;
 use crate::error::AppError;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActivityLog {
     pub id: String,
     pub level: String,
@@ -148,5 +149,22 @@ mod tests {
         assert_eq!(logs.len(), 1);
         assert_eq!(logs[0].category, "profile");
         assert!(logs[0].message.contains("Work"));
+    }
+
+    #[test]
+    fn test_serialization_uses_camel_case_dates() {
+        let conn = setup_db();
+        let logger = ActivityLogger::new(&conn);
+        logger.info("test", "mensagem").unwrap();
+
+        let logs = logger.get_all().unwrap();
+        let value = serde_json::to_value(&logs[0]).unwrap();
+
+        // O frontend lê `createdAt`; sem rename_all o campo saía como
+        // `created_at` e a tela renderizava "Invalid Date".
+        assert!(value.get("createdAt").is_some(), "esperava campo createdAt: {}", value);
+        assert!(value.get("created_at").is_none());
+        let raw = value["createdAt"].as_str().unwrap();
+        assert!(!raw.is_empty());
     }
 }

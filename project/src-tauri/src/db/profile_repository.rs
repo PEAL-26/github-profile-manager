@@ -3,6 +3,24 @@ use crate::models::profile::{CreateProfileDto, Profile};
 use rusqlite::params;
 use uuid::Uuid;
 
+/// Converte erros de violação de restrição do SQLite em mensagens amigáveis.
+/// O caso mais comum é host_alias duplicado (UNIQUE), que falhava silenciosamente
+/// na UI porque o erro genérico de banco não era exibido ao usuário.
+fn map_constraint_error(err: rusqlite::Error, host_alias: &str) -> AppError {
+    match &err {
+        rusqlite::Error::SqliteFailure(sqlite_err, msg)
+            if sqlite_err.code == rusqlite::ErrorCode::ConstraintViolation
+                && msg.as_deref().unwrap_or("").contains("host_alias") =>
+        {
+            AppError::ValidationError(format!(
+                "Já existe um perfil com o host alias \"{}\". Escolha outro alias.",
+                host_alias
+            ))
+        }
+        _ => AppError::DatabaseError(err.to_string()),
+    }
+}
+
 pub struct ProfileRepository<'a> {
     conn: &'a rusqlite::Connection,
 }
@@ -73,22 +91,24 @@ impl<'a> ProfileRepository<'a> {
         let id = Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
 
-        self.conn.execute(
-            "INSERT INTO profiles (id, name, github_username, email, host_alias, ssh_key_id, default_directory, default_branch, description, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-            params![
-                id,
-                dto.name,
-                dto.github_username,
-                dto.email,
-                dto.host_alias,
-                dto.ssh_key_id,
-                dto.default_directory,
-                dto.default_branch,
-                dto.description,
-                now,
-                now,
-            ],
-        )?;
+        self.conn
+            .execute(
+                "INSERT INTO profiles (id, name, github_username, email, host_alias, ssh_key_id, default_directory, default_branch, description, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                params![
+                    id,
+                    dto.name,
+                    dto.github_username,
+                    dto.email,
+                    dto.host_alias,
+                    dto.ssh_key_id,
+                    dto.default_directory,
+                    dto.default_branch,
+                    dto.description,
+                    now,
+                    now,
+                ],
+            )
+            .map_err(|e| map_constraint_error(e, &dto.host_alias))?;
 
         self.get_by_id(&id)
     }
@@ -96,21 +116,24 @@ impl<'a> ProfileRepository<'a> {
     pub fn update(&self, id: &str, dto: &CreateProfileDto) -> Result<Profile, AppError> {
         let now = chrono::Utc::now().to_rfc3339();
 
-        let affected = self.conn.execute(
-            "UPDATE profiles SET name = ?1, github_username = ?2, email = ?3, host_alias = ?4, ssh_key_id = ?5, default_directory = ?6, default_branch = ?7, description = ?8, updated_at = ?9 WHERE id = ?10",
-            params![
-                dto.name,
-                dto.github_username,
-                dto.email,
-                dto.host_alias,
-                dto.ssh_key_id,
-                dto.default_directory,
-                dto.default_branch,
-                dto.description,
-                now,
-                id,
-            ],
-        )?;
+        let affected = self
+            .conn
+            .execute(
+                "UPDATE profiles SET name = ?1, github_username = ?2, email = ?3, host_alias = ?4, ssh_key_id = ?5, default_directory = ?6, default_branch = ?7, description = ?8, updated_at = ?9 WHERE id = ?10",
+                params![
+                    dto.name,
+                    dto.github_username,
+                    dto.email,
+                    dto.host_alias,
+                    dto.ssh_key_id,
+                    dto.default_directory,
+                    dto.default_branch,
+                    dto.description,
+                    now,
+                    id,
+                ],
+            )
+            .map_err(|e| map_constraint_error(e, &dto.host_alias))?;
 
         if affected == 0 {
             return Err(AppError::ProfileNotFound {
@@ -150,5 +173,97 @@ impl<'a> ProfileRepository<'a> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    fn setup_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(include_str!("../../migrations/001_initial.sql"))
+            .unwrap();
+        conn
+    }
+
+    fn dto(name: &str, host_alias: &str) -> CreateProfileDto {
+        CreateProfileDto {
+            name: name.to_string(),
+            github_username: format!("{}-user", name),
+            email: format!("{}@example.com", name),
+            host_alias: host_alias.to_string(),
+            ssh_key_id: None,
+            default_directory: None,
+            default_branch: "main".to_string(),
+            description: None,
+            pat_token: None,
+        }
+    }
+
+    #[test]
+    fn test_create_and_list_more_than_two_profiles() {
+        let conn = setup_db();
+        let repo = ProfileRepository::new(&conn);
+
+        for i in 1..=5 {
+            repo.create(&dto(&format!("perfil-{}", i), &format!("github-perfil-{}", i)))
+                .unwrap();
+        }
+
+        let profiles = repo.get_all().unwrap();
+        assert_eq!(profiles.len(), 5);
+        assert!(profiles.iter().all(|p| !p.is_active));
+    }
+
+    #[test]
+    fn test_create_duplicate_host_alias_returns_friendly_error() {
+        let conn = setup_db();
+        let repo = ProfileRepository::new(&conn);
+
+        repo.create(&dto("Pessoal", "github.com")).unwrap();
+        let err = repo
+            .create(&dto("Trabalho", "github.com"))
+            .expect_err("alias duplicado deve falhar");
+
+        match err {
+            AppError::ValidationError(msg) => {
+                assert!(msg.contains("github.com"), "mensagem deve citar o alias: {}", msg);
+            }
+            other => panic!("esperava ValidationError, veio: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_update_duplicate_host_alias_returns_friendly_error() {
+        let conn = setup_db();
+        let repo = ProfileRepository::new(&conn);
+
+        let first = repo.create(&dto("Pessoal", "github-pessoal")).unwrap();
+        repo.create(&dto("Trabalho", "github-trabalho")).unwrap();
+
+        let err = repo
+            .update(&first.id, &dto("Pessoal Editado", "github-trabalho"))
+            .expect_err("alias duplicado no update deve falhar");
+
+        assert!(matches!(err, AppError::ValidationError(_)));
+    }
+
+    #[test]
+    fn test_set_active_switches_exclusively() {
+        let conn = setup_db();
+        let repo = ProfileRepository::new(&conn);
+
+        let a = repo.create(&dto("A", "github-a")).unwrap();
+        let b = repo.create(&dto("B", "github-b")).unwrap();
+
+        repo.set_active(&a.id).unwrap();
+        repo.set_active(&b.id).unwrap();
+
+        let profiles = repo.get_all().unwrap();
+        let actives: Vec<_> = profiles.iter().filter(|p| p.is_active).collect();
+        assert_eq!(actives.len(), 1);
+        assert_eq!(actives[0].id, b.id);
     }
 }

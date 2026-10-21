@@ -1,7 +1,4 @@
-import { useEffect, useState } from "react"
-import { useProfileStore } from "@/stores/useProfileStore"
-import { sshService } from "@/services"
-import type { SshKey } from "@/types"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -10,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -20,9 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useForm } from "react-hook-form"
+import { appToast } from "@/lib/toast"
+import { isHostAliasTaken } from "@/lib/validations"
+import { type CreateProfileFormData, createProfileSchema } from "@/lib/validations"
+import { sshService } from "@/services"
+import { useProfileStore } from "@/stores/useProfileStore"
+import type { SshKey } from "@/types"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createProfileSchema, type CreateProfileFormData } from "@/lib/validations"
+import { useEffect, useRef, useState } from "react"
+import { useForm } from "react-hook-form"
 
 interface CreateProfileDialogProps {
   open: boolean
@@ -30,8 +32,11 @@ interface CreateProfileDialogProps {
 }
 
 export function CreateProfileDialog({ open, onOpenChange }: CreateProfileDialogProps) {
-  const { createProfile, isLoading } = useProfileStore()
+  const { createProfile, isLoading, profiles } = useProfileStore()
   const [sshKeys, setSshKeys] = useState<SshKey[]>([])
+  // Controla se o usuário digitou o host alias manualmente;
+  // enquanto não digitar, ele é auto-gerado a partir do username.
+  const aliasTouched = useRef(false)
   const {
     register,
     handleSubmit,
@@ -45,7 +50,7 @@ export function CreateProfileDialog({ open, onOpenChange }: CreateProfileDialogP
       name: "",
       email: "",
       githubUsername: "",
-      hostAlias: "github.com",
+      hostAlias: "",
       defaultBranch: "main",
       sshKeyId: undefined,
     },
@@ -53,17 +58,42 @@ export function CreateProfileDialog({ open, onOpenChange }: CreateProfileDialogP
 
   const defaultBranch = watch("defaultBranch")
   const sshKeyId = watch("sshKeyId")
+  const githubUsername = watch("githubUsername")
+
+  // Gera a sugestão "github-<username>" (Fase 3.1 do roadmap: gerar host_alias).
+  useEffect(() => {
+    if (!aliasTouched.current && githubUsername) {
+      setValue("hostAlias", `github-${githubUsername}`)
+    }
+  }, [githubUsername, setValue])
 
   useEffect(() => {
     if (open) {
-      sshService.listKeys().then(setSshKeys).catch(() => setSshKeys([]))
+      sshService
+        .listKeys()
+        .then(setSshKeys)
+        .catch(() => setSshKeys([]))
     }
   }, [open])
 
   const onSubmit = async (data: CreateProfileFormData) => {
-    await createProfile(data)
-    reset()
-    onOpenChange(false)
+    // Validação de unicidade contra perfis existentes (além do backend).
+    if (isHostAliasTaken(data.hostAlias, profiles)) {
+      appToast.error(
+        "Host alias já em uso",
+        `Já existe um perfil com o host alias "${data.hostAlias}". Escolha outro alias.`,
+      )
+      return
+    }
+    try {
+      await createProfile(data)
+      reset()
+      aliasTouched.current = false
+      onOpenChange(false)
+    } catch {
+      // O erro já foi exibido como toast pelo store;
+      // mantém o diálogo aberto para o usuário corrigir.
+    }
   }
 
   return (
@@ -78,34 +108,17 @@ export function CreateProfileDialog({ open, onOpenChange }: CreateProfileDialogP
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome</Label>
-            <Input
-              id="name"
-              placeholder="Ex: Trabalho, Pessoal"
-              {...register("name")}
-            />
-            {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
-            )}
+            <Input id="name" placeholder="Ex: Trabalho, Pessoal" {...register("name")} />
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
+            <Input id="email" type="email" placeholder="seu@email.com" {...register("email")} />
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="githubUsername">Username GitHub</Label>
-            <Input
-              id="githubUsername"
-              placeholder="seu-username"
-              {...register("githubUsername")}
-            />
+            <Input id="githubUsername" placeholder="seu-username" {...register("githubUsername")} />
             {errors.githubUsername && (
               <p className="text-xs text-destructive">{errors.githubUsername.message}</p>
             )}
@@ -114,9 +127,16 @@ export function CreateProfileDialog({ open, onOpenChange }: CreateProfileDialogP
             <Label htmlFor="hostAlias">Host Alias</Label>
             <Input
               id="hostAlias"
-              placeholder="github.com"
-              {...register("hostAlias")}
+              placeholder="github-seu-username"
+              {...register("hostAlias", {
+                onChange: () => {
+                  aliasTouched.current = true
+                },
+              })}
             />
+            <p className="text-xs text-muted-foreground">
+              Gerado automaticamente — usado no ~/.ssh/config. Deve ser único.
+            </p>
             {errors.hostAlias && (
               <p className="text-xs text-destructive">{errors.hostAlias.message}</p>
             )}

@@ -1,6 +1,6 @@
 use crate::error::AppError;
+use crate::utils::process::run_hidden;
 use std::path::PathBuf;
-use std::process::Command;
 
 pub fn get_ssh_dir() -> Result<PathBuf, AppError> {
     let home = std::env::var("USERPROFILE").map_err(|e| AppError::SystemError(e.to_string()))?;
@@ -37,10 +37,7 @@ pub fn generate_ssh_key(
         &comment,
     ];
 
-    let output = Command::new("ssh-keygen")
-        .args(&args)
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar ssh-keygen: {}", e)))?;
+    let output = run_hidden("ssh-keygen", &args)?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -59,10 +56,7 @@ pub fn get_public_key_path(name: &str, key_type: &str) -> Result<PathBuf, AppErr
 }
 
 pub fn get_fingerprint(private_key_path: &str) -> Result<String, AppError> {
-    let output = Command::new("ssh-keygen")
-        .args(["-lf", private_key_path])
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar ssh-keygen: {}", e)))?;
+    let output = run_hidden("ssh-keygen", &["-lf", private_key_path])?;
 
     if !output.status.success() {
         return Err(AppError::SystemError(
@@ -86,10 +80,7 @@ pub fn get_fingerprint(private_key_path: &str) -> Result<String, AppError> {
 pub fn test_ssh_connection(host_alias: &str) -> Result<(bool, Option<String>, String, u64), AppError> {
     let start = std::time::Instant::now();
 
-    let output = Command::new("ssh")
-        .args(["-T", &format!("git@{}", host_alias)])
-        .output()
-        .map_err(|e| AppError::SystemError(format!("Falha ao executar ssh: {}", e)))?;
+    let output = run_hidden("ssh", &["-T", &format!("git@{}", host_alias)])?;
 
     let latency = start.elapsed().as_millis() as u64;
 

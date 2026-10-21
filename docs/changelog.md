@@ -5,6 +5,30 @@ Todas as alterações notáveis neste projeto serão documentadas neste ficheiro
 O formato baseia-se em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Não publicado]
+
+### Adicionado
+
+- Backup/Exportação (Módulo 02.5): ficheiro `.ghpm-backup` com modo padrão
+  (dados públicos) e modo completo criptografado (AES-256-GCM + PBKDF2-SHA256),
+  importação/restauração com upsert por host alias — nova seção
+  "Backup e Restauração" em Configurações
+- Log de erros em `ghpm_errors.txt` na pasta de instalação (fallback:
+  `~/.ghpm`), capturando erros de commands, panics e erros do frontend
+- Toasts de sucesso/erro nas ações de perfis (criar, editar, excluir, ativar)
+- Host alias auto-gerado (`github-<username>`) no cadastro de perfis
+
+### Corrigido
+
+- Janelas de console piscando ao trocar de perfil ou executar ações de git/ssh:
+  subprocessos agora rodam ocultos (CREATE_NO_WINDOW)
+- Perfis adicionais falhando silenciosamente após os primeiros: colisão de
+  host alias agora retorna erro amigável e a UI valida a unicidade antes
+  de enviar
+- Data dos logs de atividade exibindo "Invalid Date" (serialização camelCase)
+- Tela de Configurações não refletindo o estado salvo dos toggles
+  (mesmo problema de serialização)
+
 ## [0.1.0] - 2026-07-28
 
 ### Adicionado
