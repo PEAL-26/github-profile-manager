@@ -1,12 +1,20 @@
 name: Release
 
+# Gera um release automaticamente a cada merge/push em `main`.
+# A tag `vX.Y.Z` é criada de forma incremental conforme Conventional Commits:
+#   BREAKING CHANGE / tipo!: major | feat: minor | resto: patch
 on:
   push:
-    tags:
-      - "v*"
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+# Evita releases concorrentes (duas tags com a mesma versão)
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -15,16 +23,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Histórico completo + tags para calcular a próxima versão
+          fetch-depth: 0
+
+      - name: Calcular próxima versão
+        id: version
+        shell: bash
+        run: bash .github/scripts/next-version.sh
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          # pnpm 10+ é obrigatório: lê o project/pnpm-workspace.yaml como
+          # ficheiro de configuração (allowBuilds do esbuild). O pnpm 9
+          # falhava com "packages field missing or empty".
+          version: "12.14.0"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -35,19 +54,34 @@ jobs:
           workspaces: "./project/src-tauri -> target"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: project
+
+      - name: Testes frontend (vitest)
+        run: pnpm test
+        working-directory: project
+
+      - name: Testes backend (cargo)
+        run: cargo test
+        working-directory: project/src-tauri
+
+      - name: Sincronizar versão dos ficheiros
+        shell: bash
+        run: node .github/scripts/sync-version.mjs "${{ steps.version.outputs.version }}"
 
       - name: Build Tauri app
         run: pnpm tauri build
         working-directory: project
 
-      - name: Create Release
+      - name: Criar tag e Release
         uses: softprops/action-gh-release@v2
         with:
+          # A action cria a tag automaticamente no commit do merge
+          tag_name: ${{ steps.version.outputs.tag }}
           draft: false
           prerelease: false
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             project/src-tauri/target/release/bundle/msi/*.msi
             project/src-tauri/target/release/bundle/nsis/*.exe
