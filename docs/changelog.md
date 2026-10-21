@@ -28,6 +28,16 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Data dos logs de atividade exibindo "Invalid Date" (serialização camelCase)
 - Tela de Configurações não refletindo o estado salvo dos toggles
   (mesmo problema de serialização)
+- Release no GitHub Actions falhando com "packages field missing or empty":
+  o workflow agora usa pnpm 12 (o `pnpm-workspace.yaml` exige pnpm 10+)
+
+### Mudado
+
+- Release automatizado: em vez de exigir tag manual, agora é gerado a cada
+  merge/push em `main`, criando a tag `vX.Y.Z` de forma incremental
+  (BREAKING CHANGE → major, `feat:` → minor, resto → patch) e sincronizando
+  a versão em `package.json`, `tauri.conf.json` e `Cargo.toml` antes do build;
+  testes (vitest + cargo test) agora são pré-requisito do release
 
 ## [0.1.0] - 2026-07-28
 
