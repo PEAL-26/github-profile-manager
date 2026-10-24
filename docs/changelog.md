@@ -30,6 +30,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
   (mesmo problema de serialização)
 - Release no GitHub Actions falhando com "packages field missing or empty":
   o workflow agora usa pnpm 12 (o `pnpm-workspace.yaml` exige pnpm 10+)
+- Build do release falhando por versões divergentes do tauri-plugin-dialog
+  (crate Rust 2.7.3 vs npm 2.8.3): Cargo.lock atualizado para
+  tauri-plugin-dialog 2.8.3 / tauri 2.12.5
 
 ### Mudado
 
