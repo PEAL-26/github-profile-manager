@@ -4,6 +4,8 @@ import type {
   CreateProfilePayload,
   ImportReport,
   Profile,
+  Repository,
+  ScanRoot,
   Settings,
   SshKey,
   SshTestResult,
@@ -53,4 +55,14 @@ export const backupService = {
 export const logService = {
   getAll: () => invoke<ActivityLog[]>("get_activity_logs"),
   logError: (message: string) => invoke<void>("log_frontend_error", { message }),
+}
+
+export const repositoryService = {
+  list: () => invoke<Repository[]>("list_repositories"),
+  scan: () => invoke<Repository[]>("scan_repositories"),
+  listRoots: () => invoke<ScanRoot[]>("list_scan_roots"),
+  addRoot: (path: string) => invoke<ScanRoot>("add_scan_root", { path }),
+  removeRoot: (id: string) => invoke<void>("remove_scan_root", { id }),
+  applyProfile: (repositoryId: string, profileId: string) =>
+    invoke<Repository>("apply_profile_to_repository", { repositoryId, profileId }),
 }

@@ -9,6 +9,19 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- Scanner de Repositórios (Módulo 04): nova vista "Repositórios" na sidebar
+  - Varredura recursiva das pastas raiz configuradas (lista persistida em
+    `scan_roots`), limitada pela profundidade das Configurações e ignorando
+    diretórios de dependências (node_modules, target, vendor...)
+  - Detecção automática de perfil: e-mail local do repositório primeiro,
+    owner do remote GitHub como fallback; conflitos são sinalizados para
+    escolha manual
+  - Estados de integridade (doc 04 §5): Sincronizado / Divergente /
+    Não Mapeado com ações "Ativar perfil" e "Corrigir"
+  - Estratégia 1 (doc 04 §4.1): injeção de `user.name`, `user.email` e
+    `core.sshCommand` direto no `.git/config` + ativação global do perfil
+  - Re-scan remove automaticamente registos cujos caminhos já não existem
+  - Profundidade de varredura editável em Configurações
 - Backup/Exportação (Módulo 02.5): ficheiro `.ghpm-backup` com modo padrão
   (dados públicos) e modo completo criptografado (AES-256-GCM + PBKDF2-SHA256),
   importação/restauração com upsert por host alias — nova seção

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Repository } from "@/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -35,4 +36,26 @@ export function formatLogDate(value: string | undefined, locale = "pt-BR"): stri
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
   return date.toLocaleString(locale)
+}
+
+/** Estados de integridade da vinculação repositório↔perfil (doc 04 §5). */
+export type RepositoryStatus = "synced" | "divergent" | "unmapped"
+
+/**
+ * Classifica o repositório segundo a tabela do doc 04 §5:
+ * - `synced`: perfil vinculado e e-mail/SSH locais batem com o perfil
+ * - `divergent`: perfil vinculado mas a config local diverge
+ * - `unmapped`: sem perfil vinculado no banco
+ */
+export function repositoryStatus(
+  repo: Pick<Repository, "profileId" | "isValidProfile">,
+): RepositoryStatus {
+  if (!repo.profileId) return "unmapped"
+  return repo.isValidProfile ? "synced" : "divergent"
+}
+
+export const REPOSITORY_STATUS_LABELS: Record<RepositoryStatus, string> = {
+  synced: "Sincronizado",
+  divergent: "Divergente",
+  unmapped: "Não Mapeado",
 }
