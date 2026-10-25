@@ -1,6 +1,7 @@
 import { useAppStore } from "@/stores/useAppStore"
 import { Sidebar } from "@/components/Sidebar"
 import { ProfilesView } from "@/features/profiles/ProfilesView"
+import { RepositoriesView } from "@/features/repositories/RepositoriesView"
 import { SshKeysView } from "@/features/ssh-keys/SshKeysView"
 import { SettingsView } from "@/features/settings/SettingsView"
 import { LogsView } from "@/features/logs/LogsView"
@@ -18,6 +19,7 @@ export function AppLayout() {
         <Header />
         <main className="flex-1 overflow-y-auto p-6">
           {activeView === "profiles" && <ProfilesView />}
+          {activeView === "repositories" && <RepositoriesView />}
           {activeView === "ssh-keys" && <SshKeysView />}
           {activeView === "logs" && <LogsView />}
           {activeView === "settings" && <SettingsView />}

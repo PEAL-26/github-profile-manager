@@ -70,6 +70,28 @@ export interface AppError {
   message: string
 }
 
+export interface Repository {
+  id: string
+  name: string
+  path: string
+  profileId?: string | null
+  profileName?: string | null
+  currentGitName?: string | null
+  currentGitEmail?: string | null
+  currentSshCommand?: string | null
+  isValidProfile: boolean
+  remoteUrl?: string | null
+  suggestedProfileId?: string | null
+  suggestionConflict: boolean
+  lastScannedAt: string
+}
+
+export interface ScanRoot {
+  id: string
+  path: string
+  createdAt: string
+}
+
 export interface BackupInfo {
   encrypted: boolean
   version: string

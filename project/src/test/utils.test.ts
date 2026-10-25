@@ -1,4 +1,4 @@
-import { errorMessage, formatLogDate } from "@/lib/utils"
+import { errorMessage, formatLogDate, REPOSITORY_STATUS_LABELS, repositoryStatus } from "@/lib/utils"
 import { isHostAliasTaken } from "@/lib/validations"
 import { describe, expect, it } from "vitest"
 
@@ -70,5 +70,28 @@ describe("errorMessage", () => {
     expect(errorMessage(undefined, "fallback")).toBe("fallback")
     expect(errorMessage({}, "fallback")).toBe("fallback")
     expect(errorMessage({ message: "" }, "fallback")).toBe("fallback")
+  })
+})
+
+describe("repositoryStatus (doc 04 §5)", () => {
+  it("is unmapped when there is no linked profile", () => {
+    expect(repositoryStatus({ profileId: null, isValidProfile: false })).toBe("unmapped")
+    expect(repositoryStatus({ profileId: undefined, isValidProfile: false })).toBe("unmapped")
+  })
+
+  it("is synced when linked and local config matches the profile", () => {
+    expect(repositoryStatus({ profileId: "p1", isValidProfile: true })).toBe("synced")
+  })
+
+  it("is divergent when linked but local config diverges", () => {
+    expect(repositoryStatus({ profileId: "p1", isValidProfile: false })).toBe("divergent")
+  })
+
+  it("labels exist for every status", () => {
+    expect(REPOSITORY_STATUS_LABELS).toEqual({
+      synced: "Sincronizado",
+      divergent: "Divergente",
+      unmapped: "Não Mapeado",
+    })
   })
 })

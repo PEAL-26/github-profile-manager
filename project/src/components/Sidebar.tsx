@@ -1,10 +1,11 @@
 import { useAppStore } from "@/stores/useAppStore"
 import { Button } from "@/components/ui/button"
-import { KeyRound, User, Settings, ScrollText } from "lucide-react"
+import { FolderGit2, KeyRound, User, Settings, ScrollText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { id: "profiles" as const, label: "Perfis", icon: User },
+  { id: "repositories" as const, label: "Repositórios", icon: FolderGit2 },
   { id: "ssh-keys" as const, label: "Chaves SSH", icon: KeyRound },
   { id: "logs" as const, label: "Logs", icon: ScrollText },
   { id: "settings" as const, label: "Configurações", icon: Settings },

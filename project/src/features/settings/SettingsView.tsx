@@ -205,6 +205,25 @@ export function SettingsView() {
               max={365}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Profundidade de Varredura (subníveis)</Label>
+            <p className="text-sm text-muted-foreground">
+              Profundidade máxima do Scanner de Repositórios (doc 04 §3.1)
+            </p>
+            <Input
+              type="number"
+              className="w-32"
+              value={localSettings.scanDepth}
+              onChange={(e) =>
+                setLocalSettings({
+                  ...localSettings,
+                  scanDepth: Number(e.target.value),
+                })
+              }
+              min={1}
+              max={10}
+            />
+          </div>
         </CardContent>
       </Card>
 

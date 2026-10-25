@@ -206,6 +206,12 @@ pub fn run() {
             commands::backup_commands::get_backup_info,
             commands::backup_commands::export_backup,
             commands::backup_commands::import_backup,
+            commands::repository_commands::list_repositories,
+            commands::repository_commands::list_scan_roots,
+            commands::repository_commands::add_scan_root,
+            commands::repository_commands::remove_scan_root,
+            commands::repository_commands::scan_repositories,
+            commands::repository_commands::apply_profile_to_repository,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-type ActiveView = "profiles" | "ssh-keys" | "settings" | "logs"
+type ActiveView = "profiles" | "repositories" | "ssh-keys" | "settings" | "logs"
 
 interface AppState {
   activeView: ActiveView
